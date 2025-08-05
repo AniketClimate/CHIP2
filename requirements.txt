@@ -1,0 +1,51 @@
+# CHIP MVP Requirements
+# Climate-Resilient Healthcare Infrastructure Protection
+
+# Core web framework
+Flask==2.3.2
+Flask-CORS==4.0.0
+
+# HTTP requests and API integrations
+requests==2.31.0
+urllib3==2.0.3
+
+# Data processing and analysis
+pandas==2.0.3
+numpy==1.24.3
+
+# Database
+sqlite3
+
+# Scientific computing (for building simulations)
+scipy==1.10.1
+
+# Geospatial and climate data processing
+geopy==2.3.0
+
+# Date and time handling
+python-dateutil==2.8.2
+
+# Environment variable management
+python-dotenv==1.0.0
+
+# File handling and compression
+Pillow==10.0.0
+
+# JSON and data serialization
+jsonschema==4.18.0
+
+# Threading and async support
+asyncio
+
+# Mathematical operations
+math
+
+# Standard library imports (no installation needed)
+# os
+# json
+# uuid
+# datetime
+# threading
+# tempfile
+# zipfile
+# sqlite3

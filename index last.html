@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CHIP – Enhanced Demo</title>
+<!-- CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<!-- THREE.js & Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script> 
+<script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/OrbitControls.min.js"></script>
+
+<style>
+  body{background:#f5f7fa}
+  nav a.nav-link{font-weight:600;cursor:pointer}
+  section{display:none;padding:2rem 0}
+  section.active{display:block}
+  #viewer3d{height:450px;background:#eef1f5;border-radius:8px;position:relative;overflow:hidden}
+  .upload-box{border:2px dashed #0d6efd;border-radius:8px;padding:2rem;text-align:center;cursor:pointer}
+  .upload-box:hover{background:#f0f8ff}
+  .weather-card{background:#e3f2fd;border-radius:8px;padding:1rem;margin:1rem 0}
+  .energy-form{background:#f8f9fa;border-radius:8px;padding:1.5rem;margin:1rem 0}
+  .retrofit-card{border:2px solid #dee2e6;border-radius:8px;padding:1rem;margin:0.5rem 0;cursor:pointer;transition:all .3s}
+  .retrofit-card:hover{border-color:#0d6efd;background:#f8f9ff}
+  .retrofit-card.selected{border-color:#0d6efd;background:#e3f2fd}
+  .sun-path{position:absolute;top:10px;right:10px;width:150px;height:150px;background:rgba(255,255,255,.9);border-radius:50%;border:2px solid #ffc107}
+</style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="#">CHIP Demo</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navTabs"><span class="navbar-toggler-icon"></span></button>
+    <div class="collapse navbar-collapse" id="navTabs">
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link active" data-page="home" href="#">Home</a></li>
+        <li class="nav-item"><a class="nav-link" data-page="upload" href="#">Upload</a></li>
+        <li class="nav-item"><a class="nav-link" data-page="simulation" href="#">Simulation</a></li>
+        <li class="nav-item"><a class="nav-link" data-page="view3d" href="#">3-D View</a></li>
+        <li class="nav-item"><a class="nav-link" data-page="retrofit" href="#">Retrofit</a></li>
+        <li class="nav-item"><a class="nav-link" data-page="results" href="#">Results</a></li>
+        <li class="nav-item"><a class="nav-link" data-page="architecture" href="#">Architecture</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+<div class="container py-4">
+  <!-- HOME -->
+  <section id="home" class="active"><h2>Welcome to CHIP Enhanced</h2><p>Start by uploading your building drawings and location data.</p></section>
+  <!-- UPLOAD -->
+  <section id="upload">
+    <h2>Upload Building Data</h2>
+    <div class="upload-box mb-3" onclick="document.getElementById('fileInput').click()">
+      <i class="fa-solid fa-cloud-arrow-up fa-2xl text-primary mb-3"></i>
+      <p class="mb-0 fw-semibold">Click to upload drawings (PDF, DWG, Images)</p>
+      <input type="file" id="fileInput" accept=".pdf,.dwg,.png,.jpg,.jpeg" hidden>
+    </div>
+    <div class="row">
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">Location Coordinates (lat, lon)</label>
+        <input type="text" class="form-control" id="coords" placeholder="28.6139, 77.2090">
+        <button class="btn btn-outline-primary btn-sm mt-2" onclick="fetchWeatherData()"><i class="fa-solid fa-cloud-sun"></i> Get Weather</button>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">Building Type</label>
+        <select class="form-control" id="buildingType">
+          <option value="phc">Primary Health Centre</option>
+          <option value="hospital">District Hospital</option>
+          <option value="clinic">Community Clinic</option>
+          <option value="laboratory">Medical Laboratory</option>
+        </select>
+      </div>
+    </div>
+    <div id="weatherDisplay" class="weather-card" style="display:none"><h5>Weather</h5><div id="weatherInfo"></div></div>
+    <div class="energy-form">
+      <h5>Energy Estimate</h5>
+      <div class="row">
+        <div class="col-md-4"><label class="form-label">Area (m²)</label><input type="number" class="form-control" id="buildingArea" onchange="estimateEnergy()"></div>
+        <div class="col-md-4"><label class="form-label">Monthly Bill (₹)</label><input type="number" class="form-control" id="monthlyBill" onchange="calculateFromBill()"></div>
+        <div class="col-md-4"><label class="form-label">Annual Consumption</label><input type="text" class="form-control" id="estimatedConsumption" readonly></div>
+      </div>
+    </div>
+    <button id="startBtn" class="btn btn-primary" disabled>🚀 Start Climate Analysis</button>
+    <div id="uploadMsg" class="mt-3 fw-semibold text-success"></div>
+  </section>
+  <!-- SIMULATION -->
+  <section id="simulation"><h2>Simulation in Progress</h2><div class="spinner-border text-primary" role="status"></div><p id="simulationStatus" class="mt-3">Initializing…</p><ul class="list-unstyled mt-3"><li id="step1">⏳ Geometry</li><li id="step2">⏳ Climate</li><li id="step3">⏳ Energy</li><li id="step4">⏳ Solar</li><li id="step5">⏳ 3-D</li></ul></section>
+  <!-- 3D VIEW -->
+  <section id="view3d"><h2>3-D View & Solar</h2><div id="viewer3d" class="d-flex justify-content-center align-items-center"><span class="text-muted">loading…</span><div class="sun-path"><div style="text-align:center;padding-top:60px;font-size:.8em">☀️<br>Sun Path</div></div></div><div class="row mt-3"><div class="col-md-6"><canvas id="solarChart"></canvas></div><div class="col-md-6"><canvas id="heatGainChart"></canvas></div></div></section>
+  <!-- RETROFIT -->
+  <section id="retrofit"><h2>Select Retrofits</h2><p class="text-muted">Choose solutions suitable for your climate:</p><div id="retroList" class="row g-3"></div><button class="btn btn-success mt-3" id="calculateBtn" onclick="calculateRetrofitResults()" disabled>📊 Calculate Impact</button></section>
+  <!-- RESULTS -->
+  <section id="results"><h2>Results</h2><div class="alert alert-info">Analysis Complete</div><div class="row g-4"><div class="col-md-6"><canvas id="energyChart"></canvas></div><div class="col-md-6"><canvas id="comfortChart"></canvas></div></div><div class="row mt-4"><div class="col-md-6"><canvas id="savingsChart"></canvas></div><div class="col-md-6"><div class="card"><div class="card-body"><h5>Financial Impact</h5><div id="financialSummary"></div></div></div></div></div></section>
+  <!-- ARCHITECTURE -->
+  <section id="architecture"><h2>How CHIP Works</h2><ol><li>Upload</li><li>Weather</li><li>Simulation</li><li>Retrofit</li><li>Results</li></ol></section>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* -------- TAB ROUTER -------- */
+function switchTab(id){document.querySelectorAll('a.nav-link').forEach(l=>l.classList.toggle('active',l.dataset.page===id));document.querySelectorAll('section').forEach(s=>s.classList.toggle('active',s.id===id));}
+document.addEventListener('click',e=>{const link=e.target.closest('a.nav-link[data-page]');if(link){e.preventDefault();switchTab(link.dataset.page);}});
+/* ---- VARIABLES ---- */
+let uploadedFile=null,currentWeather=null,buildingData={},selectedRetrofits=[],scene,camera,renderer,controls;
+/* ---- UPLOAD ---- */
+fileInput.addEventListener('change',e=>{const f=e.target.files[0];if(f){uploadedFile=f;uploadMsg.textContent='✔️ '+f.name;startBtn.disabled=false;buildingData.type=buildingType.value;}});
+coords.value='28.6139, 77.2090';
+function fetchWeatherData(){const [lat,lon]=coords.value.split(',').map(s=>s.trim());currentWeather={temp:30+Math.round(Math.random()*8),humidity:50,windSpeed:8,description:'Clear',location:`(${lat},${lon})`};weatherInfo.innerHTML=`Temp: ${currentWeather.temp}°C`;weatherDisplay.style.display='block';}
+function estimateEnergy(){const a=parseFloat(buildingArea.value);if(a){buildingData.currentConsumption=Math.round(a*175);estimatedConsumption.value=buildingData.currentConsumption+' kWh';}}
+function calculateFromBill(){const b=parseFloat(monthlyBill.value);if(b){buildingData.currentConsumption=Math.round((b/6)*12);estimatedConsumption.value=buildingData.currentConsumption+' kWh';}}
+startBtn.addEventListener('click',()=>{switchTab('simulation');simulate();});
+function simulate(){const steps=['step1','step2','step3','step4','step5'];steps.forEach((id,i)=>setTimeout(()=>{document.getElementById(id).textContent='✅ '+document.getElementById(id).textContent.slice(2);if(i===steps.length-1){setTimeout(()=>{switchTab('view3d');init3D();setupRetrofits();},500);}},(i+1)*1000));}
+/* ---- 3D & SOLAR ---- */
+  function init3D() {
+  const c = document.getElementById('viewer3d');
+  c.innerHTML = '';
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(70, c.clientWidth / c.clientHeight, 0.1, 1000);
+  camera.position.set(15, 15, 15);
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(c.clientWidth, c.clientHeight);
+  c.appendChild(renderer.domElement);
+
+  controls = new THREE.OrbitControls(camera, renderer.domElement); // Enable camera rotation
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+  const dLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dLight.position.set(20, 20, 10);
+  scene.add(dLight);
+
+  const box = new THREE.Mesh(new THREE.BoxGeometry(12, 4, 8), new THREE.MeshLambertMaterial({ color: 0x8ecae6 }));
+  box.position.y = 2;
+  scene.add(box);
+
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshLambertMaterial({ color: 0x90c695 }));
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
+
+  animate();
+  createSolarCharts();
+}
+function animate(){requestAnimationFrame(animate);if(scene&&renderer&&camera){camera.lookAt(0,0,0);renderer.render(scene,camera);}}
+function createSolarCharts(){new Chart(solarChart,{type:'line',data:{labels:['6','9','12','15','18'],datasets:[{label:'Solar (W/m²)',data:[100,400,800,600,200],borderColor:'#ff6b35'}]}});new Chart(heatGainChart,{type:'bar',data:{labels:['E','S','W','N','Roof'],datasets:[{label:'Heat (kW)',data:[15,25,20,8,30],backgroundColor:'#ff9'}]}});}
+/* ---- RETROFITS ---- */
+function setupRetrofits(){
+  const list = [
+    { id: 'cool', title: 'Cool Roof', savings: 0.25 },
+    { id: 'shade', title: 'Shading', savings: 0.2 },
+    { id: 'vent', title: 'Ventilation', savings: 0.35 }
+  ];
+
+  retroList.innerHTML = list.map(r => `
+    <div class='col-md-4'>
+      <div class='retrofit-card' data-id='${r.id}' onclick="toggleRetrofit(this, '${r.id}', ${r.savings})">
+        ${r.title}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleRetrofit(card, id, save) {
+  card.classList.toggle('selected');
+  if (card.classList.contains('selected')) {
+    selectedRetrofits.push({ id, s: save });
+  } else {
+    selectedRetrofits = selectedRetrofits.filter(r => r.id !== id);
+  }
+  calculateBtn.disabled = !selectedRetrofits.length;
+}
+
+function calculateRetrofitResults(){buildingData.retrofitSavings=Math.min(selectedRetrofits.reduce((t,r)=>t+r.s,0),.6);switchTab('results');showResults();}
+function showResults(){
+  const cur = buildingData.currentConsumption || 45000;
+  const newC = Math.round(cur * (1 - buildingData.retrofitSavings));
+  const saved = cur - newC;
+
+  new Chart(energyChart, {
+    type: 'bar',
+    data: {
+      labels: ['Current Consumption (kWh)', 'Post-Retrofit (kWh)'],
+      datasets: [{
+        data: [cur, newC],
+        backgroundColor: ['#dc3545', '#198754']
+      }]
+    }
+  });
+
+  financialSummary.innerHTML = `
+    <p><strong>Baseline Consumption:</strong> ${cur.toLocaleString()} kWh/year</p>
+    <p><strong>Post-Retrofit Consumption:</strong> ${newC.toLocaleString()} kWh/year</p>
+    <p><strong>Estimated Annual Savings:</strong> ₹${(saved * 6).toLocaleString()}</p>
+  `;
+}
+
+</script>
+</body>
+</html>
